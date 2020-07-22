@@ -20,7 +20,7 @@ List<Destination> allDestinations = <Destination>[
   Destination('Emotes', Icons.face, Colors.orange, EmotesPage()),
   Destination('Stream', Icons.play_arrow, Colors.red, StreamPage()),
   Destination('Update', Icons.update, Colors.blue, UpdatePage()),
-  Destination('Credits', Icons.question_answer, Colors.black, CreditsPage()),
+  // Destination('Credits', Icons.question_answer, Colors.black, CreditsPage()),
 ];
 
 class HomeRoute extends StatefulWidget {

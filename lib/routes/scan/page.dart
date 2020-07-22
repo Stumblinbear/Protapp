@@ -1,7 +1,9 @@
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:protapp/bluetooth_provider.dart';
+import 'package:protapp/protogen_provider.dart';
 import 'package:provider/provider.dart';
 
 class ScanRoute extends StatefulWidget {
@@ -18,62 +20,57 @@ class _ScanRouteState extends State<ScanRoute> {
   initState() {
     super.initState();
 
-    bluetoothProvider.scan(Duration(seconds: 30));
+    // Clear the active Protogen connection.
+    context.read<ProtogenProvider>().disconnect();
+
+    initScan();
+  }
+
+  initScan() async {
+    // Initiate a scan for Protogen.
+    try {
+      await bluetoothProvider.scan(Duration(seconds: 30));
+    } catch(e) {
+      if(e is PlatformException) {
+        print("Bluetooth not supported, therefore this is likely a development device. Dumping to home screen with testing data.");
+
+        Navigator.pop(context);
+        Navigator.pushNamed(context, "/home");
+
+        return;
+      }
+
+      throw e;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-        create: (_) => bluetoothProvider,
-        child: Consumer<BluetoothProvider>(builder: (BuildContext context, value, Widget child) {
-          if (bluetoothProvider.device != null) {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, "/home");
-          }
+    if(context.watch<ProtogenProvider>().device != null) {
+      Navigator.pop(context);
+      Navigator.pushNamed(context, "/home");
+    }
 
-          return SafeArea(
-            child: Scaffold(body: _timedOut ? _buildTimedOut() : (bluetoothProvider.results.length > 0 ? _buildBluetoothList() : _buildWaitAnimation())),
-          );
-        }));
-  }
+    if(this._timedOut) {
+      return SafeArea(
+          child: Scaffold(
+              body: _buildTimedOut()
+          )
+      );
+    }
 
-  Widget _buildBluetoothList() {
-    List<Widget> deviceList = [];
+    if(bluetoothProvider.results.length > 0) {
+      return SafeArea(
+          child: Scaffold(
+            body: _buildBluetoothList()
+          )
+      );
+    }
 
-    bluetoothProvider.results.forEach((result) => {
-          deviceList.add(Container(
-            width: double.infinity,
-            child: FlatButton(
-              onPressed: () {
-                bluetoothProvider.connect(result.device);
-              },
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  result.advertisementData.localName,
-                  style: TextStyle(fontSize: 20.0, fontFamily: "Monospace"),
-                ),
-              ),
-            ),
-          ))
-        });
-
-    return Column(
-      children: <Widget>[
-        Container(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            "${bluetoothProvider.results.length} Protogen successfully found:",
-            style: TextStyle(fontSize: 16.0, fontFamily: "Monospace"),
-          ),
-        ),
-        Divider(color: Colors.white),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(children: deviceList),
-          ),
+    return SafeArea(
+        child: Scaffold(
+            body: _buildWaitAnimation()
         )
-      ],
     );
   }
 
@@ -162,6 +159,46 @@ class _ScanRouteState extends State<ScanRoute> {
                 style: TextStyle(fontSize: 20.0, fontFamily: "Monospace"),
               ),
             ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget _buildBluetoothList() {
+    List<Widget> deviceList = [];
+
+    bluetoothProvider.results.forEach((result) => {
+      deviceList.add(Container(
+        width: double.infinity,
+        child: FlatButton(
+          onPressed: () {
+            context.read<ProtogenProvider>().connect(result.device);
+          },
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: Text(
+              result.advertisementData.localName,
+              style: TextStyle(fontSize: 20.0, fontFamily: "Monospace"),
+            ),
+          ),
+        ),
+      ))
+    });
+
+    return Column(
+      children: <Widget>[
+        Container(
+          padding: EdgeInsets.all(32),
+          child: Text(
+            "${bluetoothProvider.results.length} Protogen successfully found:",
+            style: TextStyle(fontSize: 16.0, fontFamily: "Monospace"),
+          ),
+        ),
+        Divider(color: Colors.white),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(children: deviceList),
           ),
         )
       ],
