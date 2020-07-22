@@ -35,10 +35,7 @@ class _StartupRouteState extends State<StartupRoute> {
             return Text("${snapshot.error}");
           }
 
-          return Align(
-            alignment: Alignment.center,
-            child: CircularProgressIndicator()
-          );
+          return Align(alignment: Alignment.center, child: CircularProgressIndicator());
         });
   }
 
@@ -66,7 +63,7 @@ class _StartupRouteState extends State<StartupRoute> {
                     "Welcome, user.",
                     "",
                     "In order to locate Friendly Neighborhood Protogen, I need access to your "
-                      "current location. Please accept the request when it appears."
+                        "current location. Please accept the request when it appears."
                   ].join("\n"),
                 ],
                 onFinished: () async {
@@ -124,10 +121,7 @@ class _StartupRouteState extends State<StartupRoute> {
             return Text("${snapshot.error}");
           }
 
-          return Align(
-              alignment: Alignment.center,
-              child: CircularProgressIndicator()
-          );
+          return Align(alignment: Alignment.center, child: CircularProgressIndicator());
         });
   }
 
@@ -135,12 +129,10 @@ class _StartupRouteState extends State<StartupRoute> {
   Widget build(BuildContext context) {
     return SafeArea(
         child: Scaffold(
-            body:
-               [
-                 _step0,
-                 _step1,
-                 _step2,
-               ][_currentStep]()
-        ));
+            body: [
+      _step0,
+      _step1,
+      _step2,
+    ][_currentStep]()));
   }
 }

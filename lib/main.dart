@@ -33,25 +33,24 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-        create: (_) {
-          return themeChangeProvider;
-        },
-        child: Consumer<DarkThemeProvider>(
-            builder: (BuildContext context, value, Widget child) {
-              return MaterialApp(
-                title: 'ProtOS',
-                debugShowCheckedModeBanner: false,
-                theme: Styles.themeData(themeChangeProvider.darkTheme, context),
-
-                initialRoute: '/',
-                routes: {
-                  '/': (context) => StartupRoute(),
-                  '/scan': (context) => ScanRoute(),
-                  '/home': (context) => HomeRoute(),
-                },
-              );
+      create: (_) {
+        return themeChangeProvider;
+      },
+      child: Consumer<DarkThemeProvider>(
+        builder: (BuildContext context, value, Widget child) {
+          return MaterialApp(
+            title: 'ProtOS',
+            debugShowCheckedModeBanner: false,
+            theme: Styles.themeData(themeChangeProvider.darkTheme, context),
+            initialRoute: '/',
+            routes: {
+              '/': (context) => StartupRoute(),
+              '/scan': (context) => ScanRoute(),
+              '/home': (context) => HomeRoute(),
             },
-          ),
-      );
+          );
+        },
+      ),
+    );
   }
 }

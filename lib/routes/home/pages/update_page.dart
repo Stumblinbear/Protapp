@@ -16,7 +16,7 @@ class UpdatePage extends StatelessWidget {
                 textScaleFactor: 2,
               ),
             ),
-            Padding( padding: EdgeInsets.all(16) ),
+            Padding(padding: EdgeInsets.all(16)),
             Center(
               child: Text(
                 "<.<",

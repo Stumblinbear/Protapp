@@ -128,10 +128,7 @@ class _ScanRouteState extends State<ScanRoute> {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 16.0, fontFamily: "Monospace"),
         ),
-        Padding(
-          padding: EdgeInsets.all(16),
-            child: Divider()
-        ),
+        Padding(padding: EdgeInsets.all(16), child: Divider()),
         Container(
           width: double.infinity,
           child: FlatButton(
