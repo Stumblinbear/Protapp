@@ -32,12 +32,16 @@ class ProtogenProvider with ChangeNotifier {
 
       this.protogen.add(protogen);
     }
+
+    notifyListeners();
   }
 
   setActive(Protogen protogen) async {
     if(this._active == protogen) return;
 
     this._active = protogen;
+
+    notifyListeners();
   }
 
   void generate() {
@@ -48,6 +52,8 @@ class ProtogenProvider with ChangeNotifier {
       Protogen.generate(),
       Protogen.generate(),
     ];
+
+    notifyListeners();
   }
 }
 

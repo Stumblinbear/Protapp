@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:protapp/routes/home/pages/credits_page.dart';
 import 'package:protapp/routes/home/pages/emotes_page.dart';
+import 'package:protapp/routes/home/pages/info_page.dart';
 import 'package:protapp/routes/home/pages/stream_page.dart';
 import 'package:protapp/routes/home/pages/update_page.dart';
 
@@ -17,6 +18,7 @@ class Destination {
 }
 
 List<Destination> allDestinations = <Destination>[
+  Destination('Info', Icons.info, Colors.black, InfoPage()),
   Destination('Emotes', Icons.face, Colors.orange, EmotesPage()),
   Destination('Stream', Icons.play_arrow, Colors.red, StreamPage()),
   Destination('Update', Icons.update, Colors.blue, UpdatePage()),
