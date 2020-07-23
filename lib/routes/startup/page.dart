@@ -10,11 +10,6 @@ class StartupRoute extends StatefulWidget {
 class _StartupRouteState extends State<StartupRoute> {
   int _currentStep = 0;
 
-  @override
-  void initState() {
-    super.initState();
-  }
-
   // Check permission status
   Widget _step0() {
     return FutureBuilder<bool>(
@@ -130,9 +125,9 @@ class _StartupRouteState extends State<StartupRoute> {
     return SafeArea(
         child: Scaffold(
             body: [
-      _step0,
-      _step1,
-      _step2,
-    ][_currentStep]()));
+              _step0,
+              _step1,
+              _step2,
+            ][_currentStep]()));
   }
 }

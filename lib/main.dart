@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:protapp/protogen_provider.dart';
+import 'package:protapp/protogen.dart';
 import 'package:protapp/routes/scan/page.dart';
 import 'package:protapp/routes/startup/page.dart';
 import 'package:provider/provider.dart';
 
-import 'bluetooth_provider.dart';
 import 'dark_theme_provider.dart';
 import 'dark_theme_styles.dart';
 import 'routes/home/page.dart';
