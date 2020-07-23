@@ -60,10 +60,10 @@ class ProtogenProvider with ChangeNotifier {
 class Protogen with ChangeNotifier {
   static Guid SERVICE_GUID = Guid(GUID_PREFIX + '0000-000000000000');
 
-  static Guid MANUFACTURER = Guid('00002a29-0000-1000-8000-00805f9b34fb');
-  static Guid MODEL = Guid('00002a24-0000-1000-8000-00805f9b34fb');
-  static Guid SOFTWARE_REV = Guid('00002a28-0000-1000-8000-00805f9b34fb');
-  static Guid HARDWARE_REV = Guid('00002a26-0000-1000-8000-00805f9b34fb');
+  static Guid UPLOAD = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFF0');
+  static Guid UPLOAD_TYPE = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFF1');
+  static Guid UPLOAD_NAME = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFF2');
+  static Guid UPLOAD_CHECKSUM = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFFF');
 
   BluetoothDevice _device;
 
@@ -73,21 +73,9 @@ class Protogen with ChangeNotifier {
 
   String get name => _name;
 
-  String _manufacturer;
+  ProtogenInfo _info;
 
-  String get manufacturer => _manufacturer;
-
-  String _model;
-
-  String get model => _model;
-
-  int _softwareRevision;
-
-  int get softwareRevision => _softwareRevision;
-
-  int _hardwareRevision;
-
-  int get hardwareRevision => _hardwareRevision;
+  ProtogenInfo get info => _info;
 
   ProtogenBattery _battery;
 
@@ -118,36 +106,18 @@ class Protogen with ChangeNotifier {
 
     for (var service in (await this._device.discoverServices())) {
       if (service.uuid == ProtogenBattery.GUID) {
-        this._battery = ProtogenBattery(service.characteristics);
+        this._battery = ProtogenBattery(service);
         continue;
       }
 
       if (service.uuid == SERVICE_GUID) {
-        for (var characteristic in service.characteristics) {
-          if (characteristic.uuid == MANUFACTURER) {
-            this._manufacturer = utf8.decode(await characteristic.read());
-            continue;
-          }
+        this._info = ProtogenInfo(service);
 
-          if (characteristic.uuid == MODEL) {
-            this._model = utf8.decode(await characteristic.read());
-            continue;
-          }
-
-          if (characteristic.uuid == SOFTWARE_REV) {
-            this._softwareRevision = (await characteristic.read())[0];
-            continue;
-          }
-
-          if (characteristic.uuid == HARDWARE_REV) {
-            this._hardwareRevision = (await characteristic.read())[0];
-            continue;
-          }
-
-          if (characteristic.uuid == ProtogenScreens.GUID) {
-            this._screens = ProtogenScreens(characteristic);
-          } else if (characteristic.uuid == ProtogenEmotes.GUID) {
-            this._emotes = ProtogenEmotes(characteristic);
+        for(var subService in service.includedServices) {
+          if (subService.uuid == ProtogenScreens.GUID) {
+            this._screens = ProtogenScreens(subService);
+          } else if (subService.uuid == ProtogenEmotes.GUID) {
+            this._emotes = ProtogenEmotes(subService);
           }
         }
       }
@@ -193,24 +163,106 @@ class Protogen with ChangeNotifier {
     
     var protogen = Protogen(name, null);
 
-    protogen._manufacturer = "ACME Technologies";
-    protogen._model = "Beta Model " + ascii.decode([ random.nextInt(26) + 65 ]);
-    protogen._softwareRevision = random.nextInt(12) + 1;
-    protogen._hardwareRevision = -1;
+    protogen._info = ProtogenInfo.generate();
 
     return protogen;
   }
 }
 
-// The battery service is in the bluetooth spec, so it needs to be handled differently
-class ProtogenBattery with ChangeNotifier {
+// Wraps out custom characteristics to handle Protogen data
+abstract class ProtogenService with ChangeNotifier {
+  BluetoothService service;
+
+  Map<Guid, BluetoothCharacteristic> characteristics;
+
+  ProtogenService(this.service) {
+    if (this.service != null) {
+      this.service.characteristics.forEach((characteristic) {
+        this.characteristics[characteristic.uuid] = characteristic;
+      });
+    }
+  }
+
+  get isSupported => service != null;
+
+  void read();
+
+  void attach();
+}
+
+class ProtogenInfo extends ProtogenService {
+  static Guid MANUFACTURER = Guid(GUID_PREFIX + '-0000-000000000001');
+  static Guid MODEL = Guid(GUID_PREFIX + '-0000-000000000002');
+  static Guid MANUFACTURE_DATE = Guid(GUID_PREFIX + '-0000-000000000003');
+
+  static Guid SOFTWARE_REV = Guid(GUID_PREFIX + '-0000-000000000004');
+  static Guid HARDWARE_REV = Guid(GUID_PREFIX + '-0000-000000000004');
+
+  static List<Guid> ALL_GUIDS = [ MANUFACTURER, MODEL, MANUFACTURE_DATE, SOFTWARE_REV, HARDWARE_REV ];
+
+  String _manufacturer, _model, _manufactureDate;
+
+  int _softwareRevision, _hardwareRevision;
+
+  String get manufacturer => _manufacturer;
+
+  String get manufactureDate => _manufactureDate;
+
+  String get model => _model;
+
+  int get softwareRevision => _softwareRevision;
+
+  int get hardwareRevision => _hardwareRevision;
+
+  ProtogenInfo(BluetoothService service) : super(service);
+
+  @override
+  void read() async {
+    if(!isSupported) {
+      throw UnsupportedError("Battery service not supported.");
+    }
+
+    var values = await Future.wait(ALL_GUIDS.map((guid) => this.characteristics[guid].read()));
+
+    this._manufacturer = utf8.decode(values[0]);
+    this._model = utf8.decode(values[1]);
+    this._manufactureDate = utf8.decode(values[2]);
+    this._softwareRevision = values[3].first;
+    this._hardwareRevision = values[4].first;
+
+    notifyListeners();
+  }
+
+  @override
+  void attach() async {
+    throw UnsupportedError("Battery service not supported.");
+  }
+
+  static ProtogenInfo generate() {
+    var random = Random();
+
+    ProtogenInfo info = ProtogenInfo(null);
+
+    info._manufacturer = "ACME Technologies";
+    info._model = "Beta Model " + ascii.decode([ random.nextInt(26) + 65 ]);
+    info._manufactureDate = "September 11, 2001";
+
+    info._softwareRevision = random.nextInt(12) + 1;
+    info._hardwareRevision = -1;
+
+    return info;
+  }
+}
+
+// The battery service is in the bluetooth spec
+class ProtogenBattery extends ProtogenService {
   static Guid GUID = Guid('0000180F-0000-1000-8000-00805f9b34fb');
 
   static Guid LEVEL = Guid('00002A19-0000-1000-8000-00805f9b34fb');
   static Guid LEVEL_STATE = Guid('00002A1B-0000-1000-8000-00805f9b34fb');
   static Guid POWER_STATE = Guid('00002A1A-0000-1000-8000-00805f9b34fb');
 
-  BluetoothCharacteristic _levelCharacteristic, _levelStateCharacteristic, _powerStateCharacteristic;
+  static List<Guid> ALL_GUIDS = [ LEVEL, LEVEL_STATE, POWER_STATE ];
 
   int _level, _levelState, _powerState;
 
@@ -220,52 +272,44 @@ class ProtogenBattery with ChangeNotifier {
 
   get powerState => _powerState;
 
-  ProtogenBattery(List<BluetoothCharacteristic> characteristics) {
-    characteristics.forEach((characteristic) {
-      if (characteristic.uuid == LEVEL) {
-        this._levelCharacteristic = characteristic;
-      } else if (characteristic.uuid == LEVEL_STATE) {
-        this._levelStateCharacteristic = characteristic;
-      } else if (characteristic.uuid == POWER_STATE) {
-        this._powerStateCharacteristic = characteristic;
-      }
-    });
-  }
+  ProtogenBattery(BluetoothService service) : super(service);
 
-  get isSupported => _level != null;
-
+  @override
   void read() async {
-    var values = await Future.wait([
-      this._levelCharacteristic.read(),
-      this._levelStateCharacteristic.read(),
-      this._powerStateCharacteristic.read(),
-    ]);
+    if(!isSupported) {
+      throw UnsupportedError("Battery service not supported.");
+    }
+
+    var values = await Future.wait(ALL_GUIDS.map((guid) => this.characteristics[guid].read()));
 
     this._level = values[0].first;
-    this._levelState = values[0].first;
-    this._powerState = values[0].first;
+    this._levelState = values[1].first;
+    this._powerState = values[2].first;
 
     notifyListeners();
   }
 
-  void attach() {
-    this._levelCharacteristic.setNotifyValue(true);
-    this._levelStateCharacteristic.setNotifyValue(true);
-    this._powerStateCharacteristic.setNotifyValue(true);
+  @override
+  void attach() async {
+    if(!isSupported) {
+      throw UnsupportedError("Battery service not supported.");
+    }
 
-    this._levelCharacteristic.value.listen((event) {
+    await Future.wait(ALL_GUIDS.map((guid) => this.characteristics[guid].setNotifyValue(true)));
+
+    this.characteristics[LEVEL].value.listen((event) {
       this._level = event.first;
 
       notifyListeners();
     });
 
-    this._levelStateCharacteristic.value.listen((event) {
+    this.characteristics[LEVEL].value.listen((event) {
       this._levelState = event.first;
 
       notifyListeners();
     });
 
-    this._powerStateCharacteristic.value.listen((event) {
+    this.characteristics[LEVEL].value.listen((event) {
       this._powerState = event.first;
 
       notifyListeners();
@@ -273,55 +317,50 @@ class ProtogenBattery with ChangeNotifier {
   }
 }
 
-// Wraps out custom characteristics to handle Protogen data
-abstract class ProtogenCharacteristic with ChangeNotifier {
-  BluetoothCharacteristic characteristic;
-
-  Map<Guid, BluetoothDescriptor> descriptors;
-
-  ProtogenCharacteristic(this.characteristic) {
-    if (this.characteristic != null) {
-      this.characteristic.descriptors.forEach((descriptor) {
-        this.descriptors[descriptor.uuid] = descriptor;
-      });
-    }
-  }
-
-  get isSupported => characteristic != null;
-
-  void read();
-
-  void attach();
-}
-
-class ProtogenScreens extends ProtogenCharacteristic {
+class ProtogenScreens extends ProtogenService {
   static Guid GUID = Guid(GUID_PREFIX + '0002-000000000000');
 
-  ProtogenScreens(characteristic) : super(characteristic);
+  ProtogenScreens(BluetoothService service) : super(service);
 
   @override
-  void attach() {
+  void attach() async {
+    if(!isSupported) {
+      throw UnsupportedError("Screen service not supported.");
+    }
+
     // TODO: implement attach
   }
 
   @override
-  void read() {
+  void read() async {
+    if(!isSupported) {
+      throw UnsupportedError("Screen service not supported.");
+    }
+
     // TODO: implement read
   }
 }
 
-class ProtogenEmotes extends ProtogenCharacteristic {
+class ProtogenEmotes extends ProtogenService {
   static Guid GUID = Guid(GUID_PREFIX + '0003-000000000000');
 
-  ProtogenEmotes(characteristic) : super(characteristic);
+  ProtogenEmotes(BluetoothService characteristic) : super(characteristic);
 
   @override
-  void attach() {
+  void attach() async {
+    if(!isSupported) {
+      throw UnsupportedError("Emote service not supported.");
+    }
+
     // TODO: implement attach
   }
 
   @override
-  void read() {
+  void read() async {
+    if(!isSupported) {
+      throw UnsupportedError("Emote service not supported.");
+    }
+
     // TODO: implement read
   }
 }

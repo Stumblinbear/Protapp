@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:protapp/protogen.dart';
 import 'package:protapp/routes/scan/page.dart';
 import 'package:protapp/routes/startup/page.dart';
@@ -25,6 +26,11 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
     getCurrentAppTheme();
   }

@@ -23,12 +23,12 @@ class _ScanRouteState extends State<ScanRoute> {
   initScan() async {
     // Initiate a scan for Protogen.
     try {
-      await context.read<ProtogenProvider>().scan(Duration(seconds: 20));
+      await context.read<ProtogenProvider>().scan(Duration(seconds: 11));
     } catch(e) {
       if(e is PlatformException) {
         print("Bluetooth not supported, therefore this is likely a development device. Generating test data.");
 
-        Future.delayed(Duration(seconds: 20), () => context.read<ProtogenProvider>().generate());
+        Future.delayed(Duration(seconds: 11), () => context.read<ProtogenProvider>().generate());
 
         return;
       }else if(e.toString() == 'Error starting scan.') {
@@ -67,43 +67,39 @@ class _ScanRouteState extends State<ScanRoute> {
   Widget _buildWaitAnimation() {
     return Align(
         alignment: Alignment.bottomLeft,
-        child: SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            reverse: true,
-            child: TypewriterAnimatedTextKit(
-              isRepeatingAnimation: false,
-              speed: Duration(milliseconds: 50),
-              textStyle: TextStyle(fontSize: 16.0, fontFamily: "Monospace"),
-              textAlign: TextAlign.start,
-              alignment: AlignmentDirectional.topStart,
-              text: [
-                [
-                  "ProtoSense v0.2.1",
-                  "-----------------",
-                  "",
-                  "Booting up....................OK",
-                  "Verifying checksum............OK",
-                  "\n",
-                  "Welcome, user. Please wait......",
-                  "",
-                  "Initializing system...........OK",
-                  "Initializing antenna..........OK",
-                  "Building service net..........OK",
-                  "Preparing payload.............OK",
-                  "\n",
-                  "Please ensure your Friendly Neighborhood Protogen is willing and accepting connections."
-                      "\n",
-                  "Searching" + "." * 500 + "FAIL"
-                ].join("\n"),
-              ],
-              onFinished: () {
-                Future.delayed(const Duration(milliseconds: 1000), () {
-                  setState(() {
-                    _timedOut = true;
+        child: Scrollbar(
+          child: SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              reverse: true,
+              child: TypewriterAnimatedTextKit(
+                isRepeatingAnimation: false,
+                speed: Duration(milliseconds: 50),
+                textStyle: TextStyle(fontSize: 16.0, fontFamily: "Monospace"),
+                textAlign: TextAlign.start,
+                alignment: AlignmentDirectional.topStart,
+                text: [
+                  [
+                    "ProtoSense v0.2.1",
+                    "-----------------",
+                    "",
+                    "Please ensure your Friendly Neighborhood Protogen is willing and accepting connections.",
+                    "",
+                    "Initializing antenna..........OK",
+                    "",
+                    "Searching" + "." * 200 + "FAIL"
+                  ].join("\n"),
+                ],
+                onFinished: () {
+                  Future.delayed(const Duration(milliseconds: 1000), () {
+                    setState(() {
+                      _timedOut = true;
+                    });
                   });
-                });
-              },
-            )));
+                },
+              )
+          )
+        )
+    );
   }
 
   Widget _buildTimedOut() {
@@ -166,14 +162,14 @@ class _ScanRouteState extends State<ScanRoute> {
                 Padding(
                   padding: EdgeInsets.all(8),
                   child: Text(
-                    protogen.manufacturer + ' ' + protogen.model,
+                    protogen.info.manufacturer + ' ' + protogen.info.model,
                     style: TextStyle(fontSize: 16.0, fontFamily: "Monospace"),
                   ),
                 ),
                 Padding(
                   padding: EdgeInsets.all(8),
                   child: Text(
-                    'rev. ' + protogen.softwareRevision.toString() + ' / ' + protogen.hardwareRevision.toString(),
+                    'rev. ' + protogen.info.softwareRevision.toString() + ' / ' + protogen.info.hardwareRevision.toString(),
                     style: TextStyle(fontSize: 16.0, fontFamily: "Monospace"),
                   ),
                 ),

@@ -85,6 +85,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.10.11"
+  flip_card:
+    dependency: "direct main"
+    description:
+      name: flip_card
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.4.4"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -114,6 +121,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  google_nav_bar:
+    dependency: "direct main"
+    description:
+      name: google_nav_bar
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.2.0"
   image:
     dependency: transitive
     description:
@@ -315,6 +329,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.7.0"
+  spring_button:
+    dependency: "direct main"
+    description:
+      name: spring_button
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.13"
   stack_trace:
     dependency: transitive
     description:
@@ -336,6 +357,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.0.5"
+  superellipse_shape:
+    dependency: "direct main"
+    description:
+      name: superellipse_shape
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.5"
   term_glyph:
     dependency: transitive
     description:
