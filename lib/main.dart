@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:protapp/protogen.dart';
+import 'package:protapp/routes/protogen/page.dart';
+import 'package:protapp/routes/protogen/pages/actions_new_page.dart';
 import 'package:protapp/routes/scan/page.dart';
 import 'package:protapp/routes/startup/page.dart';
 import 'package:provider/provider.dart';
 
 import 'dark_theme_provider.dart';
 import 'dark_theme_styles.dart';
-import 'routes/home/page.dart';
 
 void main() {
   runApp(MyApp());
@@ -56,7 +57,8 @@ class _MyAppState extends State<MyApp> {
             routes: {
               '/': (context) => StartupRoute(),
               '/scan': (context) => ScanRoute(),
-              '/home': (context) => HomeRoute(),
+              '/protogen': (context) => ProtogenRoute(),
+              '/protogen/action': (context) => NewActionPage(),
             },
           );
         },

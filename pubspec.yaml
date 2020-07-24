@@ -29,11 +29,14 @@ dependencies:
 
   permission_handler: ^5.0.1
   flutter_blue: ^0.7.2
+  crypto: ^2.1.4
 
   spring_button: ^1.0.13
   superellipse_shape: ^0.1.5
   google_nav_bar: ^2.2.0
   flip_card: ^0.4.4
+  reorderables: ^0.3.2
+  popup_menu: ^1.0.5
 
   animated_text_kit: ^2.2.0
   flutter_svg: ^0.17.4

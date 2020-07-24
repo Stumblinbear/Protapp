@@ -146,7 +146,7 @@ class _ScanRouteState extends State<ScanRoute> {
             context.read<ProtogenProvider>().setActive(protogen);
 
             Navigator.pop(context);
-            Navigator.pushNamed(context, "/home");
+            Navigator.pushNamed(context, "/protogen");
           },
           child: Padding(
             padding: EdgeInsets.all(16),

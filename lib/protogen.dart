@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 
@@ -60,12 +62,9 @@ class ProtogenProvider with ChangeNotifier {
 class Protogen with ChangeNotifier {
   static Guid SERVICE_GUID = Guid(GUID_PREFIX + '0000-000000000000');
 
-  static Guid UPLOAD = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFF0');
-  static Guid UPLOAD_TYPE = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFF1');
-  static Guid UPLOAD_NAME = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFF2');
-  static Guid UPLOAD_CHECKSUM = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFFF');
-
   BluetoothDevice _device;
+
+  int _packetSize;
 
   get device => _device;
 
@@ -85,9 +84,9 @@ class Protogen with ChangeNotifier {
 
   ProtogenScreens get screens => _screens;
 
-  ProtogenEmotes _emotes;
+  ProtogenActions _actions;
 
-  ProtogenEmotes get emotes => _emotes;
+  ProtogenActions get actions => _actions;
 
   Protogen(this._name, this._device);
 
@@ -102,34 +101,31 @@ class Protogen with ChangeNotifier {
   _connect() async {
     if(this._device == null) return;
 
-    this._device.requestMtu(512);
+    // Update the current MTU if it changes
+    this._device.mtu.listen((mtu) {
+      _packetSize = mtu - 3; // 3 bytes of header information
+    });
+
+    await this._device.requestMtu(512);
 
     for (var service in (await this._device.discoverServices())) {
       if (service.uuid == ProtogenBattery.GUID) {
-        this._battery = ProtogenBattery(service);
+        this._battery = ProtogenBattery(this, service);
         continue;
       }
 
       if (service.uuid == SERVICE_GUID) {
-        this._info = ProtogenInfo(service);
+        this._info = ProtogenInfo(this, service);
 
         for(var subService in service.includedServices) {
           if (subService.uuid == ProtogenScreens.GUID) {
-            this._screens = ProtogenScreens(subService);
-          } else if (subService.uuid == ProtogenEmotes.GUID) {
-            this._emotes = ProtogenEmotes(subService);
+            this._screens = ProtogenScreens(this, subService);
+          } else if (subService.uuid == ProtogenActions.GUID) {
+            this._actions = ProtogenActions(this, subService);
           }
         }
       }
     }
-  }
-
-  _attach() async {
-    if (this._device == null) return;
-
-    this._battery.attach();
-    this._screens.attach();
-    this._emotes.attach();
   }
 
   _disconnect() async {
@@ -142,8 +138,6 @@ class Protogen with ChangeNotifier {
 
   connect() async {
     await this._connect();
-
-    await this._attach();
 
     notifyListeners();
   }
@@ -163,19 +157,21 @@ class Protogen with ChangeNotifier {
     
     var protogen = Protogen(name, null);
 
-    protogen._info = ProtogenInfo.generate();
+    protogen._info = ProtogenInfo.generate(protogen);
 
     return protogen;
   }
 }
 
-// Wraps out custom characteristics to handle Protogen data
+// Wraps our custom characteristics
 abstract class ProtogenService with ChangeNotifier {
+  Protogen protogen;
+
   BluetoothService service;
 
   Map<Guid, BluetoothCharacteristic> characteristics;
 
-  ProtogenService(this.service) {
+  ProtogenService(this.protogen, this.service) {
     if (this.service != null) {
       this.service.characteristics.forEach((characteristic) {
         this.characteristics[characteristic.uuid] = characteristic;
@@ -188,6 +184,76 @@ abstract class ProtogenService with ChangeNotifier {
   void read();
 
   void attach();
+}
+
+abstract class ProtogenDataService extends ProtogenService {
+  static Guid STATE = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFFD');
+  static Guid PART = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFFE');
+  static Guid CHECKSUM = Guid(GUID_PREFIX + 'FFFF-FFFFFFFFFFFF');
+
+  List<int> _checksum;
+
+  ProtogenDataService(Protogen protogen, BluetoothService service) : super(protogen, service) {
+    characteristics[CHECKSUM].setNotifyValue(true);
+
+    characteristics[CHECKSUM].value.listen((data) {
+      _checksum = data;
+    });
+  }
+
+  void send(List<int> data, { Function(List<int>) onResponse }) async {
+    // Tell the device we want to send data
+    characteristics[STATE].write([ 1 ], withoutResponse: false);
+
+    // Update the checksum
+    characteristics[CHECKSUM].write(md5.convert(data).bytes.getRange(0, min(32, protogen._packetSize)), withoutResponse: false);
+
+    // Split up the data into the MTU size and send it
+    for(int i = 0; i < data.length; i++)
+      await characteristics[PART].write(data.getRange(i, min(i + protogen._packetSize, data.length)), withoutResponse: false);
+
+    // Tell the device we're done sending data
+    characteristics[STATE].write([ 0 ], withoutResponse: false);
+
+    // If we've defined onResponse, then we're expecting a return value
+    if(onResponse != null) {
+      // Once we've written the data, listen in the other direction
+      await characteristics[PART].setNotifyValue(true);
+      await characteristics[STATE].setNotifyValue(true);
+
+      List<int> response = List<int>();
+
+      characteristics[PART].value.listen((data) {
+        response += data;
+      });
+
+      characteristics[STATE].value.listen((data) async {
+        if (data.first == 1) return;
+
+        // Something happened (other than the "begun transfer" notification). Stop listening.
+        await characteristics[STATE].setNotifyValue(false);
+        await characteristics[PART].setNotifyValue(false);
+
+        if (data.first == -1) {
+          print("Protogen received bad data, resending request.");
+
+          // Resend the request
+          send(data, onResponse: onResponse);
+        } else if (data.first == 0) {
+          if(_checksum == md5.convert(response).bytes.getRange(0, min(32, protogen._packetSize))) {
+            print("Received bad data, resending request.");
+
+            // Resend the request
+            send(data, onResponse: onResponse);
+
+            return;
+          }
+
+          onResponse(response);
+        }
+      });
+    }
+  }
 }
 
 class ProtogenInfo extends ProtogenService {
@@ -214,7 +280,7 @@ class ProtogenInfo extends ProtogenService {
 
   int get hardwareRevision => _hardwareRevision;
 
-  ProtogenInfo(BluetoothService service) : super(service);
+  ProtogenInfo(Protogen protogen, BluetoothService service) : super(protogen, service);
 
   @override
   void read() async {
@@ -227,8 +293,9 @@ class ProtogenInfo extends ProtogenService {
     this._manufacturer = utf8.decode(values[0]);
     this._model = utf8.decode(values[1]);
     this._manufactureDate = utf8.decode(values[2]);
-    this._softwareRevision = values[3].first;
-    this._hardwareRevision = values[4].first;
+    // Uint8List(4)..buffer.asByteData().setInt16(0, value, Endian.big)
+    this._softwareRevision = Uint8List.fromList(values[3]).buffer.asByteData().getUint16(0);
+    this._hardwareRevision = Uint8List.fromList(values[4]).buffer.asByteData().getUint16(0);
 
     notifyListeners();
   }
@@ -238,17 +305,17 @@ class ProtogenInfo extends ProtogenService {
     throw UnsupportedError("Battery service not supported.");
   }
 
-  static ProtogenInfo generate() {
+  static ProtogenInfo generate(Protogen protogen) {
     var random = Random();
 
-    ProtogenInfo info = ProtogenInfo(null);
+    ProtogenInfo info = ProtogenInfo(protogen, null);
 
     info._manufacturer = "ACME Technologies";
     info._model = "Beta Model " + ascii.decode([ random.nextInt(26) + 65 ]);
     info._manufactureDate = "September 11, 2001";
 
     info._softwareRevision = random.nextInt(12) + 1;
-    info._hardwareRevision = -1;
+    info._hardwareRevision = 1;
 
     return info;
   }
@@ -272,7 +339,7 @@ class ProtogenBattery extends ProtogenService {
 
   get powerState => _powerState;
 
-  ProtogenBattery(BluetoothService service) : super(service);
+  ProtogenBattery(Protogen protogen, BluetoothService service) : super(protogen, service);
 
   @override
   void read() async {
@@ -317,10 +384,10 @@ class ProtogenBattery extends ProtogenService {
   }
 }
 
-class ProtogenScreens extends ProtogenService {
+class ProtogenScreens extends ProtogenDataService {
   static Guid GUID = Guid(GUID_PREFIX + '0002-000000000000');
 
-  ProtogenScreens(BluetoothService service) : super(service);
+  ProtogenScreens(Protogen protogen, BluetoothService service) : super(protogen, service);
 
   @override
   void attach() async {
@@ -341,10 +408,10 @@ class ProtogenScreens extends ProtogenService {
   }
 }
 
-class ProtogenEmotes extends ProtogenService {
+class ProtogenActions extends ProtogenDataService {
   static Guid GUID = Guid(GUID_PREFIX + '0003-000000000000');
 
-  ProtogenEmotes(BluetoothService characteristic) : super(characteristic);
+  ProtogenActions(Protogen protogen, BluetoothService service) : super(protogen, service);
 
   @override
   void attach() async {
@@ -363,4 +430,11 @@ class ProtogenEmotes extends ProtogenService {
 
     // TODO: implement read
   }
+}
+
+class ProtogenAction {
+  String name;
+  String icon;
+
+  ProtogenAction(this.name, { this.icon });
 }
