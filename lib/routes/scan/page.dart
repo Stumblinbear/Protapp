@@ -2,7 +2,7 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:protapp/protogen.dart';
+import 'package:protapp/protocol/protogen.dart';
 import 'package:provider/provider.dart';
 
 class ScanRoute extends StatefulWidget {
@@ -23,15 +23,13 @@ class _ScanRouteState extends State<ScanRoute> {
   initScan() async {
     // Initiate a scan for Protogen.
     try {
-      await context.read<ProtogenProvider>().scan(Duration(seconds: 11));
+      await context.read<ProtogenProvider>().scan(Duration(seconds: 15));
     } catch(e) {
-      if(e is PlatformException) {
+      if(e is PlatformException && e.code == "bluetooth_unavailable") {
         print("Bluetooth not supported, therefore this is likely a development device. Generating test data.");
 
-        Future.delayed(Duration(seconds: 11), () => context.read<ProtogenProvider>().generate());
+        Future.delayed(Duration(seconds: 15), () => context.read<ProtogenProvider>().generate());
 
-        return;
-      }else if(e.toString() == 'Error starting scan.') {
         return;
       }
 
@@ -41,18 +39,18 @@ class _ScanRouteState extends State<ScanRoute> {
 
   @override
   Widget build(BuildContext context) {
-    if(this._timedOut) {
-      return SafeArea(
-          child: Scaffold(
-              body: _buildTimedOut()
-          )
-      );
-    }
-
     if(context.watch<ProtogenProvider>().protogen.length > 0) {
       return SafeArea(
           child: Scaffold(
             body: _buildBluetoothList()
+          )
+      );
+    }
+
+    if(this._timedOut) {
+      return SafeArea(
+          child: Scaffold(
+              body: _buildTimedOut()
           )
       );
     }
@@ -119,7 +117,7 @@ class _ScanRouteState extends State<ScanRoute> {
               setState(() {
                 _timedOut = false;
 
-                context.read<ProtogenProvider>().scan(Duration(seconds: 30));
+                this.initScan();
               });
             },
             child: Padding(

@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:protapp/protogen.dart';
+import 'package:protapp/protocol/actions.dart';
+import 'package:protapp/protocol/protogen.dart';
 import 'package:reorderables/reorderables.dart';
 import 'package:spring_button/spring_button.dart';
+import 'package:provider/provider.dart';
 
 class ActionsPage extends StatefulWidget {
   @override
@@ -11,27 +13,11 @@ class ActionsPage extends StatefulWidget {
 }
 
 class _ActionsPageState extends State<ActionsPage> {
-  List<ProtogenAction> _actions;
-
   bool _dragging = false;
 
   @override
   void initState() {
     super.initState();
-
-    this._actions = <ProtogenAction>[
-      ProtogenAction("Neutral", icon: "emotes/neutral.svg"),
-      ProtogenAction("Sad", icon: "emotes/unknown.svg"),
-      ProtogenAction("Angery", icon: "emotes/unknown.svg"),
-      ProtogenAction("Boot", icon: "emotes/unknown.svg"),
-      ProtogenAction("Boo", icon: "emotes/unknown.svg"),
-      ProtogenAction("Wav", icon: "emotes/unknown.svg"),
-      ProtogenAction("Hot", icon: "emotes/unknown.svg"),
-      ProtogenAction("Ded", icon: "emotes/unknown.svg"),
-      ProtogenAction("Overheating", icon: "emotes/unknown.svg"),
-      ProtogenAction("Low Battery", icon: "emotes/unknown.svg"),
-      ProtogenAction("Shut Down", icon: "emotes/unknown.svg"),
-    ];
   }
 
   Widget createActionButton(BuildContext context, {@required VoidCallback onPressed, String icon, String text}) {
@@ -49,6 +35,8 @@ class _ActionsPageState extends State<ActionsPage> {
 
   @override
   Widget build(BuildContext context) {
+    var actions = context.watch<ProtogenProvider>().active.actions.actions;
+
     return SafeArea(
         child: Scaffold(
           body: Column(
@@ -57,33 +45,36 @@ class _ActionsPageState extends State<ActionsPage> {
                 child: SingleChildScrollView(
                   child: Align(
                     alignment: Alignment.center,
-                    child: ReorderableWrap(
-                      spacing: 4.0,
-                      runSpacing: 16.0,
-                      padding: EdgeInsets.all(8),
-                      alignment: WrapAlignment.spaceEvenly,
-                      children: _actions.map((action) => this.createActionButton(context, onPressed: () {
-                        // TODO: do.
-                      }, icon: action.icon, text: action.name)).toList(),
-                      onReorderStarted: (int index) {
-                        setState(() {
-                          _dragging = true;
-                        });
-                      },
-                      onNoReorder: (int index) {
-                        setState(() {
-                          _dragging = false;
-                        });
-                      },
-                      onReorder: (int oldIndex, int newIndex) {
-                        setState(() {
-                          _dragging = false;
+                    child: Container(
+                      width: double.infinity,
+                      child: ReorderableWrap(
+                        spacing: 4.0,
+                        runSpacing: 16.0,
+                        padding: EdgeInsets.all(8),
+                        alignment: WrapAlignment.spaceEvenly,
+                        children: actions.map((action) => this.createActionButton(context, onPressed: () {
+                          // TODO: do.
+                        }, icon: action.icon, text: action.name)).toList(),
+                        onReorderStarted: (int index) {
+                          setState(() {
+                            _dragging = true;
+                          });
+                        },
+                        onNoReorder: (int index) {
+                          setState(() {
+                            _dragging = false;
+                          });
+                        },
+                        onReorder: (int oldIndex, int newIndex) {
+                          setState(() {
+                            _dragging = false;
 
-                          var item = _actions.removeAt(oldIndex);
-                          _actions.insert(newIndex, item);
-                        });
-                      },
-                    ),
+                            var item = actions.removeAt(oldIndex);
+                            actions.insert(newIndex, item);
+                          });
+                        },
+                      ),
+                    )
                   ),
                 ),
               ),
@@ -108,16 +99,16 @@ class _ActionsPageState extends State<ActionsPage> {
                           },
                           onWillAccept: (data) => true,
                           onAccept: (index) {
-                            if(index == _actions.length - 1) {
+                            if(index == actions.length - 1) {
                               WidgetsBinding.instance.addPostFrameCallback((context) =>
                               {
                                 setState(() {
-                                  _actions.removeAt(index);
+                                  actions.removeAt(index);
                                 })
                               });
                             }else{
                               setState(() {
-                                _actions.removeAt(index);
+                                actions.removeAt(index);
                               });
                             }
                           },
@@ -137,7 +128,7 @@ class _ActionsPageState extends State<ActionsPage> {
                           },
                           onWillAccept: (data) => true,
                           onAccept: (index) {
-                            Navigator.pushNamed(context, '/protogen/action', arguments: _actions[index]);
+                            Navigator.pushNamed(context, '/protogen/action', arguments: actions[index]);
                           },
                         ),
                       ),

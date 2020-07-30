@@ -6,7 +6,7 @@ import 'package:protapp/dark_theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:superellipse_shape/superellipse_shape.dart';
 
-import '../../../protogen.dart';
+import '../../../protocol/protogen.dart';
 
 class InfoPage extends StatelessWidget {
   @override

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:protapp/protogen.dart';
+import 'package:protapp/protocol/protogen.dart';
 import 'package:protapp/routes/protogen/page.dart';
 import 'package:protapp/routes/protogen/pages/actions_new_page.dart';
 import 'package:protapp/routes/scan/page.dart';
