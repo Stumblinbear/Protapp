@@ -267,7 +267,7 @@ abstract class ProtogenDataService extends ProtogenService {
     characteristics[CHECKSUM].write(md5.convert(data).bytes.getRange(0, min(32, protogen._packetSize)), withoutResponse: false);
 
     // Split up the data into the MTU size and send it
-    for(int i = 0; i < data.length; i++)
+    for(int i = 0; i < data.length; i += protogen._packetSize)
       await characteristics[PART].write(data.getRange(i, min(i + protogen._packetSize, data.length)), withoutResponse: false);
 
     // Tell the device we're done sending data
